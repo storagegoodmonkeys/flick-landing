@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
 import type { Metadata } from "next";
 
@@ -5,16 +6,47 @@ const APP_STORE_URL = "https://apps.apple.com/app/id6759716459";
 
 type Props = {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ s?: string }>;
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+function getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+async function getDisplayCode(
+  serialCode: string,
+  shortParam?: string
+): Promise<string> {
+  if (shortParam) return shortParam;
+
+  const supabase = getSupabase();
+  if (!supabase) return serialCode;
+
+  const { data } = await supabase
+    .from("lighter_codes")
+    .select("short_code")
+    .eq("serial_code", serialCode)
+    .maybeSingle();
+
+  return data?.short_code || serialCode;
+}
+
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { code } = await params;
+  const { s } = await searchParams;
+  const displayCode = await getDisplayCode(code, s);
+
   return {
-    title: `Flick Lighter ${code} — View in App`,
+    title: `Flick Lighter ${displayCode} — View in App`,
     description:
       "Scan this Flick lighter QR code to add it to your collection. Download Flick to get started.",
     openGraph: {
-      title: `Flick Lighter — ${code}`,
+      title: `Flick Lighter — ${displayCode}`,
       description:
         "Someone shared a Flick lighter with you. Open the app or download it to view this lighter.",
       url: `https://flick.goodmonkeys.com/l/${code}`,
@@ -38,8 +70,10 @@ function AppleIcon() {
   );
 }
 
-export default async function LighterPage({ params }: Props) {
+export default async function LighterPage({ params, searchParams }: Props) {
   const { code } = await params;
+  const { s } = await searchParams;
+  const displayCode = await getDisplayCode(code, s);
 
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col">
@@ -99,7 +133,7 @@ export default async function LighterPage({ params }: Props) {
           </h1>
 
           <p className="text-muted mb-4 animate-fade-up-delay-2">
-            Someone shared lighter <span className="text-white font-medium">{code}</span> with you.
+            Someone shared lighter <span className="text-white font-medium">{displayCode}</span> with you.
             Open it in Flick to see details, ownership history, and more.
           </p>
 
