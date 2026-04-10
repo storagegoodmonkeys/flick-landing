@@ -36,6 +36,27 @@ async function getDisplayCode(
   return data?.short_code || serialCode;
 }
 
+async function getLighterId(serialCode: string): Promise<number | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+
+  const { data } = await supabase
+    .from("lighter_codes")
+    .select("lighter_id")
+    .eq("serial_code", serialCode)
+    .maybeSingle();
+
+  if (data?.lighter_id) return data.lighter_id;
+
+  const { data: lighter } = await supabase
+    .from("lighters")
+    .select("lighter_id")
+    .eq("qr_code", serialCode)
+    .maybeSingle();
+
+  return lighter?.lighter_id || null;
+}
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { code } = await params;
   const { s } = await searchParams;
@@ -74,6 +95,7 @@ export default async function LighterPage({ params, searchParams }: Props) {
   const { code } = await params;
   const { s } = await searchParams;
   const displayCode = await getDisplayCode(code, s);
+  const lighterId = await getLighterId(code);
 
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col">
@@ -143,6 +165,16 @@ export default async function LighterPage({ params, searchParams }: Props) {
           </p>
 
           <div className="space-y-4 animate-fade-up-delay-4">
+            {lighterId && (
+              <a
+                href={`rork-app://lighter/${lighterId}`}
+                className="flex items-center justify-center gap-3 bg-primary hover:bg-primary-dark text-white font-semibold px-8 py-4 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 w-full"
+              >
+                <span className="text-2xl">🔥</span>
+                <span className="text-lg font-semibold">Open in Flick</span>
+              </a>
+            )}
+
             <a
               href={APP_STORE_URL}
               className="flex items-center justify-center gap-3 bg-white text-black font-semibold px-8 py-4 rounded-2xl hover:bg-gray-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-white/10 w-full"
@@ -166,7 +198,7 @@ export default async function LighterPage({ params, searchParams }: Props) {
             </a>
           </div>
 
-          {/* Hidden script to store the code for post-install routing */}
+          {/* Try to open the app via custom URL scheme (fallback for when Universal Links don't work) */}
           <script
             dangerouslySetInnerHTML={{
               __html: `
@@ -174,6 +206,20 @@ export default async function LighterPage({ params, searchParams }: Props) {
                   localStorage.setItem('flick_pending_code', '${code.replace(/'/g, "\\'")}');
                   localStorage.setItem('flick_pending_url', window.location.href);
                 } catch(e) {}
+                ${lighterId ? `
+                // Try opening the app via custom URL scheme
+                (function() {
+                  var appUrl = 'rork-app://lighter/${lighterId}';
+                  var start = Date.now();
+                  var iframe = document.createElement('iframe');
+                  iframe.style.display = 'none';
+                  iframe.src = appUrl;
+                  document.body.appendChild(iframe);
+                  setTimeout(function() {
+                    document.body.removeChild(iframe);
+                  }, 2000);
+                })();
+                ` : ''}
               `,
             }}
           />
