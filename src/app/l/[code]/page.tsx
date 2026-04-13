@@ -73,6 +73,14 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       url: `https://flick.goodmonkeys.com/l/${code}`,
       siteName: "Flick by Good Monkeys",
       type: "website",
+      images: [
+        {
+          url: "https://flick.goodmonkeys.com/flick-icon.png",
+          width: 1021,
+          height: 1022,
+          alt: "Flick App Icon",
+        },
+      ],
     },
   };
 }
