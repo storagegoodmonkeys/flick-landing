@@ -33,6 +33,7 @@ async function sendExpoPush(
     body: JSON.stringify({
       to: token,
       sound: "flick-notification.wav",
+      priority: "high",
       title,
       body,
       data: data || {},
