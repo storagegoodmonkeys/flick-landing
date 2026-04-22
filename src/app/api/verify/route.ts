@@ -43,17 +43,16 @@ function htmlPage(
       min-height: 100vh; padding: 24px;
     }
     .card { text-align: center; max-width: 400px; width: 100%; }
+    .brand-icon {
+      width: 96px; height: 96px; border-radius: 22px;
+      display: block; margin: 0 auto 24px;
+      box-shadow: 0 8px 24px rgba(229,57,53,0.35);
+    }
     .icon {
-      width: 90px; height: 90px; border-radius: 50%;
+      width: 72px; height: 72px; border-radius: 50%;
       background: ${success ? "rgba(76,175,80,0.15)" : "rgba(255,152,0,0.15)"};
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 24px; font-size: 44px;
-    }
-    .brand {
-      font-size: 28px; font-weight: 800;
-      background: linear-gradient(135deg, #FFD700, #FF6B35);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; margin-bottom: 20px;
+      margin: 0 auto 20px; font-size: 36px;
     }
     h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
     p { font-size: 15px; color: #999; line-height: 1.6; margin-bottom: 28px; }
@@ -70,7 +69,7 @@ function htmlPage(
 </head>
 <body>
   <div class="card">
-    <div class="brand">Flick!</div>
+    <img class="brand-icon" src="https://gnzrcanlxueqffcdiykl.supabase.co/storage/v1/object/public/public-assets/email/flick-icon.png" alt="Flick!" />
     <div class="icon">${success ? "✅" : "⚠️"}</div>
     <h1>${title}</h1>
     <p>${message}</p>
@@ -127,13 +126,8 @@ export async function GET(request: NextRequest) {
       min-height: 100vh; padding: 24px;
     }
     .card { text-align: center; max-width: 400px; width: 100%; }
-    .brand {
-      font-size: 28px; font-weight: 800;
-      background: linear-gradient(135deg, #FFD700, #FF6B35);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; margin-bottom: 20px;
-    }
-    .icon { width: 90px; height: 90px; border-radius: 50%; background: rgba(255,215,0,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 44px; }
+    .brand-icon { width: 96px; height: 96px; border-radius: 22px; display: block; margin: 0 auto 24px; box-shadow: 0 8px 24px rgba(229,57,53,0.35); }
+    .icon { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,215,0,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 36px; }
     h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
     p { font-size: 15px; color: #999; line-height: 1.6; margin-bottom: 28px; }
     .btn { display: inline-block; background: linear-gradient(135deg, #FFD700, #FFA000); color: #0A0A0A; padding: 16px 40px; border-radius: 14px; text-decoration: none; font-weight: 700; font-size: 16px; width: 100%; text-align: center; }
@@ -145,7 +139,7 @@ export async function GET(request: NextRequest) {
 </head>
 <body>
   <div class="card">
-    <div class="brand">Flick!</div>
+    <img class="brand-icon" src="https://gnzrcanlxueqffcdiykl.supabase.co/storage/v1/object/public/public-assets/email/flick-icon.png" alt="Flick!" />
     <div class="icon">🔑</div>
     <h1>Opening Flick App...</h1>
     <div class="spinner"></div>
