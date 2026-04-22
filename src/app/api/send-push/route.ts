@@ -22,7 +22,8 @@ async function sendExpoPush(
   token: string,
   title: string,
   body: string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
+  sound: string = "flick-notification.wav"
 ) {
   const response = await fetch("https://exp.host/--/api/v2/push/send", {
     method: "POST",
@@ -32,7 +33,7 @@ async function sendExpoPush(
     },
     body: JSON.stringify({
       to: token,
-      sound: "flick-notification.wav",
+      sound,
       priority: "high",
       title,
       body,
@@ -66,7 +67,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { user_id, title, body: pushBody, data: pushData } = body;
+    const {
+      user_id,
+      title,
+      body: pushBody,
+      data: pushData,
+      sound: pushSound,
+    } = body;
 
     if (!user_id || !title || !pushBody) {
       return NextResponse.json(
@@ -98,7 +105,10 @@ export async function POST(request: NextRequest) {
       targetUser.expo_push_token,
       title,
       pushBody,
-      pushData
+      pushData,
+      typeof pushSound === "string" && pushSound.length > 0
+        ? pushSound
+        : "flick-notification.wav"
     );
 
     return NextResponse.json({ success: true, result });
