@@ -82,10 +82,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the target user's push token
+    // Get the target user's push token + notification preferences
     const { data: targetUser, error: userError } = await supabase
       .from("users")
-      .select("expo_push_token, full_name")
+      .select(
+        "expo_push_token, full_name, notif_enabled, notif_new_messages, notif_lighter_updates, notif_badges"
+      )
       .eq("user_id", user_id)
       .maybeSingle();
 
@@ -98,6 +100,56 @@ export async function POST(request: NextRequest) {
         { error: "User has no push token registered" },
         { status: 400 }
       );
+    }
+
+    // Honor user's notification preferences
+    // Master switch: if off, suppress everything
+    if (targetUser.notif_enabled === false) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: "notifications disabled by user",
+      });
+    }
+
+    // Per-type filtering based on data.type. Unknown/friend types always pass.
+    const notifType =
+      typeof pushData === "object" && pushData !== null
+        ? String((pushData as Record<string, unknown>).type ?? "")
+        : "";
+    const MESSAGE_TYPES = new Set(["message", "message_received"]);
+    const LIGHTER_TYPES = new Set([
+      "location",
+      "lighter_checkin",
+      "lighter_found",
+      "lighter_discarded",
+      "lighter_reunited",
+      "transfer_request",
+      "transfer_response",
+      "claim_response",
+    ]);
+    const BADGE_TYPES = new Set(["badge", "achievement"]);
+
+    if (MESSAGE_TYPES.has(notifType) && targetUser.notif_new_messages === false) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: "new_messages disabled",
+      });
+    }
+    if (LIGHTER_TYPES.has(notifType) && targetUser.notif_lighter_updates === false) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: "lighter_updates disabled",
+      });
+    }
+    if (BADGE_TYPES.has(notifType) && targetUser.notif_badges === false) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: "badges disabled",
+      });
     }
 
     // Send the push notification

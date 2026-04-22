@@ -62,7 +62,9 @@ export async function GET(request: NextRequest) {
         lighter_id,
         users (
           expo_push_token,
-          full_name
+          full_name,
+          notif_enabled,
+          notif_lighter_updates
         ),
         lighters (
           nickname,
@@ -89,6 +91,12 @@ export async function GET(request: NextRequest) {
       const lighter = fav.lighters as any;
 
       if (!user?.expo_push_token) {
+        skipped++;
+        continue;
+      }
+
+      // Respect the user's notification preferences
+      if (user.notif_enabled === false || user.notif_lighter_updates === false) {
         skipped++;
         continue;
       }
