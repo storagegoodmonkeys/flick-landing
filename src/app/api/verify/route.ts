@@ -1,21 +1,4 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-
-let _supabaseAdmin: SupabaseClient | null = null;
-
-function getSupabaseAdmin(): SupabaseClient {
-  if (!_supabaseAdmin) {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-    }
-    _supabaseAdmin = createClient(url, key, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-  }
-  return _supabaseAdmin;
-}
 
 function getAppScheme(): string {
   return process.env.APP_SCHEME || "rork-app";
@@ -107,15 +90,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // PASSWORD RESET — redirect to app with token
-  if (type === "recovery") {
-    const appUrl = `${scheme}://verify?token_hash=${encodeURIComponent(tokenHash)}&type=recovery`;
-    const html = `<!DOCTYPE html>
+  // All types deep-link into the app; the app itself calls verifyOtp client-side
+  // so the user ends up with a real device session after tapping the email link.
+  const appUrl = `${scheme}://verify?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}`;
+
+  const isRecovery = type === "recovery";
+  const iconEmoji = isRecovery ? "🔑" : "🔥";
+  const pageTitle = isRecovery ? "Reset Password" : "Verify Email";
+  const bodyCopy = isRecovery
+    ? "You'll be redirected to set your new password. If the app doesn't open automatically, tap below."
+    : "You'll be redirected into the Flick app to finish setting up your account. If the app doesn't open automatically, tap below.";
+
+  const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reset Password - Flick</title>
+  <title>${pageTitle} - Flick</title>
   <meta http-equiv="refresh" content="2;url=${appUrl}">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -140,66 +131,18 @@ export async function GET(request: NextRequest) {
 <body>
   <div class="card">
     <img class="brand-icon" src="https://gnzrcanlxueqffcdiykl.supabase.co/storage/v1/object/public/public-assets/email/flick-icon.png" alt="Flick!" />
-    <div class="icon">🔑</div>
+    <div class="icon">${iconEmoji}</div>
     <h1>Opening Flick App...</h1>
     <div class="spinner"></div>
-    <p>You'll be redirected to set your new password. If the app doesn't open automatically, tap below.</p>
+    <p>${bodyCopy}</p>
     <a class="btn" href="${appUrl}">Open Flick App</a>
     <p class="footer">Flick — The Lighter Community</p>
   </div>
 </body>
 </html>`;
-    return new NextResponse(html, {
-      status: 200,
-      headers: { "Content-Type": "text/html" },
-    });
-  }
 
-  // EMAIL VERIFICATION — verify OTP server-side
-  try {
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: type as "signup" | "email",
-    });
-
-    if (error) {
-      console.error("[verify] OTP error:", error.message);
-      return new NextResponse(
-        htmlPage(
-          "Verification Failed",
-          `Could not verify your email: ${error.message}. The link may have expired. Please request a new one from the app.`,
-          false,
-          `${scheme}://`,
-          "Open Flick App"
-        ),
-        { status: 200, headers: { "Content-Type": "text/html" } }
-      );
-    }
-
-    console.log("[verify] Success, user:", data.user?.id);
-    return new NextResponse(
-      htmlPage(
-        "Email Verified!",
-        "Your Flick account has been verified successfully. You can now sign in and start your lighter journey!",
-        true,
-        `${scheme}://`,
-        "Open Flick App"
-      ),
-      { status: 200, headers: { "Content-Type": "text/html" } }
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    console.error("[verify] Exception:", msg);
-    return new NextResponse(
-      htmlPage(
-        "Something Went Wrong",
-        "An unexpected error occurred. Please try again or contact support.",
-        false,
-        `${scheme}://`,
-        "Open Flick App"
-      ),
-      { status: 500, headers: { "Content-Type": "text/html" } }
-    );
-  }
+  return new NextResponse(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html" },
+  });
 }
