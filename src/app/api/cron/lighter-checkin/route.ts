@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     // Get all users who have a main lighter (favorite_lighters with notes='main_lighter')
+    // Only include active lighters (status 1) — skip lost (2), discarded (3), found (4), pending transfer (5)
     const { data: favorites, error: favError } = await supabase
       .from("favorite_lighters")
       .select(
@@ -66,13 +67,15 @@ export async function GET(request: NextRequest) {
           notif_enabled,
           notif_lighter_updates
         ),
-        lighters (
+        lighters!inner (
           nickname,
-          lighter_id
+          lighter_id,
+          lighter_status
         )
       `
       )
-      .eq("notes", "main_lighter");
+      .eq("notes", "main_lighter")
+      .eq("lighters.lighter_status", 1);
 
     if (favError) {
       console.error("[lighter-checkin] Error fetching favorites:", favError.message);

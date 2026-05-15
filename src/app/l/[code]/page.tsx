@@ -57,19 +57,47 @@ async function getLighterId(serialCode: string): Promise<number | null> {
   return lighter?.lighter_id || null;
 }
 
+async function getIsOwned(lighterId: number | null): Promise<boolean> {
+  if (!lighterId) return false;
+
+  const supabase = getSupabase();
+  if (!supabase) return false;
+
+  const { data } = await supabase
+    .from("lighter_ownership")
+    .select("ownership_id")
+    .eq("lighter_id", lighterId)
+    .eq("is_current_owner", true)
+    .maybeSingle();
+
+  return !!data;
+}
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { code } = await params;
   const { s } = await searchParams;
   const displayCode = await getDisplayCode(code, s);
+  const lighterId = await getLighterId(code);
+  const isOwned = await getIsOwned(lighterId);
+
+  const description = isOwned
+    ? `You found lighter ${displayCode}! Download Flick to discover its journey, connect with previous owners, and more.`
+    : `You found a brand new Flick! lighter. Download the app to register it, start your collection, and connect with other collectors.`;
+
+  const ogDescription = isOwned
+    ? `You found a Flick lighter that belongs to someone! Open the app to discover its story.`
+    : `You found a brand new Flick! lighter. Register it and start your collection.`;
 
   return {
-    title: `Flick Lighter ${displayCode} — View in App`,
-    description:
-      "Scan this Flick lighter QR code to add it to your collection. Download Flick to get started.",
+    title: isOwned
+      ? `Flick Lighter ${displayCode} — You Found One!`
+      : `Flick Lighter ${displayCode} — Brand New!`,
+    description,
     openGraph: {
-      title: `Flick Lighter — ${displayCode}`,
-      description:
-        "Someone shared a Flick lighter with you. Open the app or download it to view this lighter.",
+      title: isOwned
+        ? `Flick Lighter ${displayCode} — Found!`
+        : `Flick Lighter ${displayCode} — Brand New!`,
+      description: ogDescription,
       url: `https://flick.goodmonkeys.com/l/${code}`,
       siteName: "Flick by Good Monkeys",
       type: "website",
@@ -104,6 +132,7 @@ export default async function LighterPage({ params, searchParams }: Props) {
   const { s } = await searchParams;
   const displayCode = await getDisplayCode(code, s);
   const lighterId = await getLighterId(code);
+  const isOwned = await getIsOwned(lighterId);
 
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col">
@@ -156,16 +185,33 @@ export default async function LighterPage({ params, searchParams }: Props) {
             </div>
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold mb-4 animate-fade-up-delay-2">
-            View This Lighter
-            <br />
-            <span className="text-primary">in the Flick App</span>
-          </h1>
+          {isOwned ? (
+            <>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 animate-fade-up-delay-2">
+                You Found a Lighter!
+                <br />
+                <span className="text-primary">Discover Its Story</span>
+              </h1>
 
-          <p className="text-muted mb-4 animate-fade-up-delay-2">
-            Someone shared lighter <span className="text-white font-medium">{displayCode}</span> with you.
-            Open it in Flick to see details, ownership history, and more.
-          </p>
+              <p className="text-muted mb-4 animate-fade-up-delay-2">
+                You found lighter <span className="text-white font-medium">{displayCode}</span> — it belongs to someone!
+                Download Flick to discover its journey, connect with previous owners, and more.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 animate-fade-up-delay-2">
+                A Brand New
+                <br />
+                <span className="text-primary">Flick! Lighter</span>
+              </h1>
+
+              <p className="text-muted mb-4 animate-fade-up-delay-2">
+                You{"'"}ve got lighter <span className="text-white font-medium">{displayCode}</span> — a brand new Flick! lighter.
+                Register it, start your collection, and connect with other collectors.
+              </p>
+            </>
+          )}
 
           <p className="text-muted/60 text-sm mb-8 animate-fade-up-delay-3">
             If you have Flick installed, the app should open automatically.
