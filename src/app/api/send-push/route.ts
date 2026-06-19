@@ -34,7 +34,6 @@ async function sendExpoPush(
     body: JSON.stringify({
       to: token,
       sound,
-      priority: "high",
       title,
       body,
       data: data || {},
