@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
         users (
           expo_push_token,
           full_name,
+          preferred_language,
           notif_enabled,
           notif_lighter_updates
         ),
@@ -106,11 +107,21 @@ export async function GET(request: NextRequest) {
 
       const lighterName = lighter?.nickname || `Lighter #${lighter?.lighter_id || fav.lighter_id}`;
 
+      // Send in the recipient's language (Turkish phone → Turkish), keeping
+      // the lighter name. Falls back to English for any non-'tr' language.
+      const isTr = user.preferred_language === "tr";
+      const title = isTr
+        ? `"${lighterName}" hâlâ sende mi?`
+        : `Is "${lighterName}" still with you?`;
+      const checkinBody = isTr
+        ? "Onaylamak ve konumunu güncellemek için dokun."
+        : "Tap to confirm and update its location.";
+
       try {
         await sendExpoPush(
           user.expo_push_token,
-          `Is "${lighterName}" still with you?`,
-          "Tap to confirm and update its location.",
+          title,
+          checkinBody,
           {
             type: "lighter_checkin",
             lighter_id: fav.lighter_id,

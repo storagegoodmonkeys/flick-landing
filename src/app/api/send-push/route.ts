@@ -152,15 +152,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Sound policy: message notifications ALWAYS use the default iOS sound,
+    // every other notification uses the custom Flint sound. Messages are
+    // forced to "default" even though the app passes "flick-notification.wav"
+    // (its client-side default), so this works without an app rebuild.
+    // Non-message callers may still override via an explicit `sound`.
+    const resolvedSound = MESSAGE_TYPES.has(notifType)
+      ? "default"
+      : typeof pushSound === "string" && pushSound.length > 0
+        ? pushSound
+        : "flick-notification.wav";
+
     // Send the push notification
     const result = await sendExpoPush(
       targetUser.expo_push_token,
       title,
       pushBody,
       pushData,
-      typeof pushSound === "string" && pushSound.length > 0
-        ? pushSound
-        : "flick-notification.wav"
+      resolvedSound
     );
 
     return NextResponse.json({ success: true, result });
